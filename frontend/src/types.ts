@@ -1466,6 +1466,58 @@ export interface ExecuteProjectResponse {
   project: Project;
 }
 
+// ==============================================================================
+// SECTION 16: ENTERPRISE RBAC & ACCESS CONTROL
+// ==============================================================================
 
+export interface OrgRole {
+  role_id: string;
+  title: string;
+  department: string;
+  description: string;
+  hierarchy_level: number;
+}
 
+export interface AppRole {
+  role_id: string;
+  name: string;
+  description: string;
+  permissions: string[];
+}
 
+export interface UserAccount {
+  user_id: string;
+  name: string;
+  email: string;
+  department: string;
+  org_role_id: string;
+  org_role_title: string;
+  effective_app_roles: string[];
+  effective_permissions: string[];
+  avatar_url?: string;
+  status: 'ACTIVE' | 'SUSPENDED';
+  last_login?: string;
+}
+
+export interface LoginResponse {
+  authenticated: boolean;
+  token: string;
+  user: UserAccount;
+}
+
+export interface RBACPermissionOverview {
+  org_roles: OrgRole[];
+  app_roles: AppRole[];
+  role_mappings: Record<string, string[]>; // app_role_id -> org_role_id[]
+  users: UserAccount[];
+  all_permissions: string[];
+  matrix_timestamp: string;
+}
+
+export interface CreateUserPayload {
+  name: string;
+  email: string;
+  department: string;
+  org_role_id: string;
+  custom_app_role_override?: string;
+}

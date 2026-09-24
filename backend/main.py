@@ -9,7 +9,11 @@ from backend.models import (
     CreateProjectRequest, 
     ExecuteProjectRequest, 
     GoldenTestRunRequest, 
-    FailureSimulationRequest
+    FailureSimulationRequest,
+    LoginRequest,
+    CreateUserRequest,
+    UpdateUserRequest,
+    UpdateRoleMappingRequest
 )
 
 app = FastAPI(
@@ -954,6 +958,54 @@ def reset_project_health(project_id: str):
         return engine.reset_project_health(project_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+# ==============================================================================
+# SECTION 16: ENTERPRISE RBAC & AUTHENTICATION ENDPOINTS
+# ==============================================================================
+
+@app.post("/api/auth/login")
+def auth_login(payload: LoginRequest):
+    user = engine.authenticate_user(payload.email, payload.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid corporate credentials or user account deactivated.")
+    return {
+        "authenticated": True,
+        "token": f"prip-enterprise-jwt-{user['user_id']}",
+        "user": user
+    }
+
+@app.get("/api/auth/users")
+def get_auth_users():
+    return engine.get_all_users()
+
+@app.post("/api/auth/users")
+def create_auth_user(payload: CreateUserRequest, operator: str = Query("Platform Admin")):
+    try:
+        return engine.create_user(payload.dict(), operator=operator)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.patch("/api/auth/users/{user_id}")
+def update_auth_user(user_id: str, payload: UpdateUserRequest, operator: str = Query("Platform Admin")):
+    try:
+        return engine.update_user(user_id, payload.dict(exclude_unset=True), operator=operator)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.get("/api/auth/rbac/overview")
+def get_rbac_overview():
+    return engine.get_rbac_overview()
+
+@app.post("/api/auth/rbac/mapping")
+def update_role_mapping(payload: UpdateRoleMappingRequest):
+    try:
+        return engine.update_role_mapping(
+            app_role_id=payload.app_role_id,
+            mapped_org_role_ids=payload.mapped_org_role_ids,
+            operator=payload.operator or "Platform Admin"
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run("backend.main:app", host="0.0.0.0", port=6090, reload=True)

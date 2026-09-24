@@ -29,6 +29,9 @@ import { PortalLandingDashboard } from './components/PortalLandingDashboard';
 import { ProjectOnboardingModal } from './components/ProjectOnboardingModal';
 import { GoldenTestRunnerModal } from './components/GoldenTestRunnerModal';
 import { EdgeCaseSimulatorModal } from './components/EdgeCaseSimulatorModal';
+import { LoginModal } from './components/LoginModal';
+import { UserProfileMenu } from './components/UserProfileMenu';
+import { AdminAccessControlModal } from './components/AdminAccessControlModal';
 
 import { 
   SystemsOfRecord, MetricsResponse, StuckWorkItem, 
@@ -38,7 +41,7 @@ import {
   PlayAutonomyRecord, DeclaredCapability, PlanesOverview, 
   SubstrateData, DAGExecutionPlan, AdjudicationData, EvidenceItem,
   IntakeEvaluationResponse, RCALearningLoopProposal,
-  Project, ProjectExecutionRecord
+  Project, ProjectExecutionRecord, UserAccount
 } from './types';
 
 export default function App() {
@@ -81,6 +84,25 @@ export default function App() {
   const [filterByProject, setFilterByProject] = useState<boolean>(true);
   const [goldenModalOpen, setGoldenModalOpen] = useState<boolean>(false);
   const [simulatorModalOpen, setSimulatorModalOpen] = useState<boolean>(false);
+
+  // Section 16: Enterprise RBAC & IT Company Access Control
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+  const [loginModalOpen, setLoginModalOpen] = useState<boolean>(false);
+  const [adminModalOpen, setAdminModalOpen] = useState<boolean>(false);
+  const [rbacDeniedToast, setRbacDeniedToast] = useState<{ action: string; requiredPerm: string } | null>(null);
+
+  const hasPermission = (perm: string): boolean => {
+    if (!currentUser) return false;
+    if (currentUser.effective_app_roles?.includes('SUPER_ADMIN')) return true;
+    return currentUser.effective_permissions?.includes(perm) ?? false;
+  };
+
+  const requirePermission = (perm: string, actionName: string): boolean => {
+    if (hasPermission(perm)) return true;
+    playBeep(320, 0.15);
+    setRbacDeniedToast({ action: actionName, requiredPerm: perm });
+    return false;
+  };
 
   // Loading/Trigger states
   const [loading, setLoading] = useState(true);
@@ -177,7 +199,44 @@ export default function App() {
 
   useEffect(() => {
     fetchAllData();
+
+    // Initialize corporate persona / auth session
+    const savedUser = localStorage.getItem('prip_auth_user');
+    if (savedUser) {
+      try {
+        setCurrentUser(JSON.parse(savedUser));
+      } catch {
+        // invalid JSON fallback
+      }
+    } else {
+      fetch('/api/auth/users')
+        .then(r => r.json())
+        .then(users => {
+          if (Array.isArray(users) && users.length > 0) {
+            const adminUser = users.find((u: any) => u.user_id === 'usr-sarah') || users[0];
+            setCurrentUser(adminUser);
+            localStorage.setItem('prip_auth_user', JSON.stringify(adminUser));
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
+
+  const refreshCurrentSession = async () => {
+    try {
+      const res = await fetch('/api/auth/users');
+      if (res.ok) {
+        const users: UserAccount[] = await res.json();
+        if (currentUser) {
+          const updated = users.find(u => u.user_id === currentUser.user_id);
+          if (updated) {
+            setCurrentUser(updated);
+            localStorage.setItem('prip_auth_user', JSON.stringify(updated));
+          }
+        }
+      }
+    } catch {}
+  };
 
   const handleSyncMesh = async () => {
     playBeep(880, 0.1);
@@ -571,6 +630,18 @@ export default function App() {
             >
               {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4" />}
             </button>
+
+            {/* Corporate User Profile & Quick Persona Switcher */}
+            <UserProfileMenu
+              currentUser={currentUser}
+              onOpenLoginModal={() => setLoginModalOpen(true)}
+              onOpenAdminModal={() => setAdminModalOpen(true)}
+              onLogout={() => {
+                localStorage.removeItem('prip_auth_user');
+                setCurrentUser(null);
+                setLoginModalOpen(true);
+              }}
+            />
           </div>
         </div>
       </header>
@@ -655,7 +726,10 @@ export default function App() {
                       </select>
 
                       <button
-                        onClick={() => setOnboardingModalOpen(true)}
+                        onClick={() => {
+                          if (!requirePermission('project.onboard', 'Onboard Enterprise Microservice')) return;
+                          setOnboardingModalOpen(true);
+                        }}
                         className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 font-mono text-xs transition-all"
                         title="Onboard a new project repository"
                       >
@@ -702,6 +776,7 @@ export default function App() {
 
                     <button
                       onClick={() => {
+                        if (!requirePermission('golden_tests.run', 'Run Golden Set Test Suite')) return;
                         playBeep(580, 0.06);
                         setGoldenModalOpen(true);
                       }}
@@ -714,6 +789,7 @@ export default function App() {
 
                     <button
                       onClick={() => {
+                        if (!requirePermission('chaos.simulate', 'Simulate Chaos & Fault Injection')) return;
                         playBeep(500, 0.08);
                         setSimulatorModalOpen(true);
                       }}
@@ -726,7 +802,10 @@ export default function App() {
 
                     <button
                       disabled={executingProject}
-                      onClick={() => handleExecuteProject(activeProjectId)}
+                      onClick={() => {
+                        if (!requirePermission('pipeline.execute', 'Execute Project Pipeline')) return;
+                        handleExecuteProject(activeProjectId);
+                      }}
                       className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-mono text-xs font-bold transition-all shadow-glow-emerald ${
                         executingProject
                           ? 'opacity-60 bg-slate-800 text-slate-400 border border-white/10'
@@ -739,6 +818,40 @@ export default function App() {
                   </div>
                 )}
               </div>
+
+              {/* RBAC Permission Denied Alert Banner */}
+              {rbacDeniedToast && (
+                <div className="mt-2 p-3.5 rounded-xl bg-red-950/80 border border-red-500/60 shadow-lg shadow-red-950/50 flex items-center justify-between gap-3 animate-fade-in text-xs font-mono">
+                  <div className="flex items-center gap-2.5">
+                    <ShieldAlert className="w-5 h-5 text-red-400 shrink-0" />
+                    <div>
+                      <div className="text-red-300 font-bold flex items-center gap-1.5">
+                        <span>ACCESS CONTROL RESTRICTION:</span>
+                        <span className="text-[10px] bg-red-500/20 px-1.5 py-0.2 rounded border border-red-500/30 text-red-200">
+                          {rbacDeniedToast.requiredPerm}
+                        </span>
+                      </div>
+                      <p className="text-white mt-0.5">
+                        Current corporate persona <strong>{currentUser?.name || 'Guest'}</strong> ({currentUser?.org_role_title || 'Unauthenticated'}) does not possess the capability grant required to perform <strong>{rbacDeniedToast.action}</strong>.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setLoginModalOpen(true)}
+                      className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] transition-colors shadow-sm"
+                    >
+                      Switch Persona
+                    </button>
+                    <button
+                      onClick={() => setRbacDeniedToast(null)}
+                      className="text-slate-400 hover:text-white px-2 py-1 rounded bg-black/40"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Project Execution Toast Banner */}
               {projectExecutionToast && (
@@ -1033,6 +1146,25 @@ export default function App() {
         onClose={() => setSimulatorModalOpen(false)}
         onFailureSimulated={fetchAllData}
         onHealthRestored={fetchAllData}
+      />
+
+      {/* Section 16: Enterprise RBAC Authentication & Persona Switcher */}
+      <LoginModal
+        isOpen={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        currentUser={currentUser}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          setRbacDeniedToast(null);
+        }}
+      />
+
+      {/* Section 16: Admin Access Control Console */}
+      <AdminAccessControlModal
+        isOpen={adminModalOpen}
+        onClose={() => setAdminModalOpen(false)}
+        currentUser={currentUser}
+        onUserUpdated={refreshCurrentSession}
       />
 
 

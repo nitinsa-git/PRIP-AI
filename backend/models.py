@@ -1204,6 +1204,65 @@ class FailureSimulationResponse(BaseModel):
     summary: str
     remediation_recommendation: str
 
+# ==============================================================================
+# SECTION 16: ENTERPRISE RBAC & ACCESS CONTROL
+# ==============================================================================
+
+class OrgRole(BaseModel):
+    role_id: str
+    title: str
+    department: str
+    description: str
+    hierarchy_level: int
+
+class AppRole(BaseModel):
+    role_id: str
+    name: str
+    description: str
+    permissions: List[str]
+
+class UserAccount(BaseModel):
+    user_id: str
+    name: str
+    email: str
+    department: str
+    org_role_id: str
+    org_role_title: str
+    effective_app_roles: List[str]
+    effective_permissions: List[str]
+    avatar_url: Optional[str] = None
+    status: str = "ACTIVE"
+    last_login: Optional[str] = None
+
+class LoginRequest(BaseModel):
+    email: str
+    password: Optional[str] = "PripAi2026!"
+
+class LoginResponse(BaseModel):
+    authenticated: bool
+    token: str
+    user: UserAccount
+
+class CreateUserRequest(BaseModel):
+    name: str
+    email: str
+    department: str
+    org_role_id: str
+    custom_app_role_override: Optional[str] = None
+
+class UpdateUserRequest(BaseModel):
+    name: Optional[str] = None
+    department: Optional[str] = None
+    org_role_id: Optional[str] = None
+    status: Optional[str] = None
+    custom_app_role_override: Optional[str] = None
+
+class UpdateRoleMappingRequest(BaseModel):
+    app_role_id: str
+    mapped_org_role_ids: List[str]
+    operator: Optional[str] = "Platform Admin"
+
+
 
 
 

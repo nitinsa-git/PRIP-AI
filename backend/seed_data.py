@@ -3638,6 +3638,226 @@ SEED_GOLDEN_SUITES = {
     }
 }
 
+# ==============================================================================
+# SECTION 16: CORPORATE IT RBAC DATA & USER ACCOUNTS
+# ==============================================================================
+
+SEED_ORG_ROLES = [
+    {
+        "role_id": "org-admin",
+        "title": "Platform Systems Administrator",
+        "department": "Platform Operations",
+        "description": "Enterprise IT administrator managing infrastructure, IAM directory, toolchain credentials, and system posture.",
+        "hierarchy_level": 1
+    },
+    {
+        "role_id": "org-ciso",
+        "title": "Chief Information Security Officer (CISO)",
+        "department": "Information Security & SecOps",
+        "description": "Executive sponsor for zero-trust perimeter, data enclosure, cryptographic boundary validation, and PCI DSS compliance.",
+        "hierarchy_level": 1
+    },
+    {
+        "role_id": "org-arch",
+        "title": "Principal Enterprise Architect",
+        "department": "Architecture Office",
+        "description": "Author of ADR standards, bounded context topology, decoupled streaming rules, and architectural debt arbiter.",
+        "hierarchy_level": 2
+    },
+    {
+        "role_id": "org-sre",
+        "title": "Lead Site Reliability Engineer (SRE)",
+        "department": "Reliability & Infrastructure",
+        "description": "Custodian of cluster health, P99 latency budgets, blast-radius mitigation, circuit breakers, and chaos validation.",
+        "hierarchy_level": 2
+    },
+    {
+        "role_id": "org-release",
+        "title": "Release & Delivery Governor",
+        "department": "Release & Delivery Management",
+        "description": "Coordinates cross-squad deployments, CAB approvals, canary gate verifications, and lead-time optimizations.",
+        "hierarchy_level": 2
+    },
+    {
+        "role_id": "org-dev",
+        "title": "Senior Full-Stack Developer",
+        "department": "Product Engineering",
+        "description": "Author of pull requests, bug fixes, feature payloads, and local test coverage across domain microservices.",
+        "hierarchy_level": 3
+    },
+    {
+        "role_id": "org-audit",
+        "title": "Compliance & PCI-DSS Auditor",
+        "department": "Internal Audit & Risk Oversight",
+        "description": "Independent evaluator inspecting immutable 6-tuple evidence logs, cryptographic trails, and non-compliance waivers.",
+        "hierarchy_level": 3
+    }
+]
+
+SEED_APP_ROLES = [
+    {
+        "role_id": "SUPER_ADMIN",
+        "name": "Super Administrator",
+        "description": "Unrestricted mesh sovereignty. Manage users, RBAC mapping rules, override locks, and register microservices.",
+        "permissions": [
+            "pipeline.execute", "golden_tests.run", "chaos.simulate", 
+            "health.restore", "waiver.create", "waiver.approve", 
+            "arbiter.override", "project.onboard", "rbac.manage", "circuit_breaker.toggle"
+        ]
+    },
+    {
+        "role_id": "SECURITY_LEAD",
+        "name": "Security Sentinel Lead",
+        "description": "Enforce Invariant #1 (Enclosure) & #10 (Authentication). Manage cryptographic credentials, secret audits, and security waivers.",
+        "permissions": [
+            "golden_tests.run", "waiver.create", "waiver.approve", 
+            "arbiter.override", "audit.view_immutable"
+        ]
+    },
+    {
+        "role_id": "ARCH_GOVERNOR",
+        "name": "Architecture Governor",
+        "description": "Enforce ADR-001 decoupling, approve/reject Architectural Waivers, resolve Super Agent challenges, and onboard new projects.",
+        "permissions": [
+            "golden_tests.run", "waiver.create", "waiver.approve", 
+            "project.onboard", "audit.view_immutable"
+        ]
+    },
+    {
+        "role_id": "SRE_OPERATOR",
+        "name": "Site Reliability Operator",
+        "description": "Trigger targeted pipeline runs, inject chaos and failure simulations, trip/reset circuit breakers, and restore baseline health.",
+        "permissions": [
+            "pipeline.execute", "golden_tests.run", "chaos.simulate", 
+            "health.restore", "circuit_breaker.toggle"
+        ]
+    },
+    {
+        "role_id": "RELEASE_MANAGER",
+        "name": "Release Delivery Manager",
+        "description": "Control Stage 3 Release Gates, approve production deployment promotions, and execute verified delivery pipelines.",
+        "permissions": [
+            "pipeline.execute", "waiver.create", "golden_tests.run", 
+            "audit.view_immutable"
+        ]
+    },
+    {
+        "role_id": "SQUAD_DEV",
+        "name": "Squad Developer",
+        "description": "Submit code changes for conformance evaluation, run regression golden suites, and propose architectural waivers.",
+        "permissions": [
+            "golden_tests.run", "waiver.create"
+        ]
+    },
+    {
+        "role_id": "AUDIT_COMPLIANCE",
+        "name": "Compliance & Forensics Auditor",
+        "description": "Read-only access to immutable 6-tuple audit ledger, evidence store, and operational telemetry.",
+        "permissions": [
+            "audit.view_immutable"
+        ]
+    }
+]
+
+# N:M Mapping: Each Application Role maps to multiple Organizational Roles
+SEED_ROLE_MAPPINGS = {
+    "SUPER_ADMIN": ["org-admin"],
+    "SECURITY_LEAD": ["org-ciso", "org-sre", "org-admin"],
+    "ARCH_GOVERNOR": ["org-arch", "org-ciso", "org-audit"],
+    "SRE_OPERATOR": ["org-sre", "org-admin", "org-arch"],
+    "RELEASE_MANAGER": ["org-release", "org-admin"],
+    "SQUAD_DEV": ["org-dev", "org-sre", "org-arch"],
+    "AUDIT_COMPLIANCE": ["org-audit", "org-ciso", "org-release"]
+}
+
+SEED_USERS = [
+    {
+        "user_id": "usr-sarah",
+        "name": "Sarah Chen",
+        "email": "sarah.admin@corp.internal",
+        "department": "Platform Operations",
+        "org_role_id": "org-admin",
+        "org_role_title": "Platform Systems Administrator",
+        "custom_app_role_override": None,
+        "avatar_url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+        "status": "ACTIVE",
+        "last_login": "Today, 08:30 UTC"
+    },
+    {
+        "user_id": "usr-elena",
+        "name": "Elena Rostova",
+        "email": "elena.ciso@corp.internal",
+        "department": "Information Security & SecOps",
+        "org_role_id": "org-ciso",
+        "org_role_title": "Chief Information Security Officer (CISO)",
+        "custom_app_role_override": None,
+        "avatar_url": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
+        "status": "ACTIVE",
+        "last_login": "Today, 09:15 UTC"
+    },
+    {
+        "user_id": "usr-david",
+        "name": "David Ross",
+        "email": "david.arch@corp.internal",
+        "department": "Architecture Office",
+        "org_role_id": "org-arch",
+        "org_role_title": "Principal Enterprise Architect",
+        "custom_app_role_override": None,
+        "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+        "status": "ACTIVE",
+        "last_login": "Today, 10:02 UTC"
+    },
+    {
+        "user_id": "usr-marcus",
+        "name": "Marcus Vance",
+        "email": "marcus.sre@corp.internal",
+        "department": "Reliability & Infrastructure",
+        "org_role_id": "org-sre",
+        "org_role_title": "Lead Site Reliability Engineer (SRE)",
+        "custom_app_role_override": None,
+        "avatar_url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
+        "status": "ACTIVE",
+        "last_login": "Today, 11:20 UTC"
+    },
+    {
+        "user_id": "usr-jordan",
+        "name": "Jordan Taylor",
+        "email": "jordan.delivery@corp.internal",
+        "department": "Release & Delivery Management",
+        "org_role_id": "org-release",
+        "org_role_title": "Release & Delivery Governor",
+        "custom_app_role_override": None,
+        "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+        "status": "ACTIVE",
+        "last_login": "Today, 07:45 UTC"
+    },
+    {
+        "user_id": "usr-priya",
+        "name": "Priya Sharma",
+        "email": "priya.dev@corp.internal",
+        "department": "Product Engineering",
+        "org_role_id": "org-dev",
+        "org_role_title": "Senior Full-Stack Developer",
+        "custom_app_role_override": None,
+        "avatar_url": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150",
+        "status": "ACTIVE",
+        "last_login": "Today, 12:10 UTC"
+    },
+    {
+        "user_id": "usr-arthur",
+        "name": "Arthur Pendelton",
+        "email": "arthur.auditor@corp.internal",
+        "department": "Internal Audit & Risk Oversight",
+        "org_role_id": "org-audit",
+        "org_role_title": "Compliance & PCI-DSS Auditor",
+        "custom_app_role_override": None,
+        "avatar_url": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
+        "status": "ACTIVE",
+        "last_login": "Yesterday, 16:30 UTC"
+    }
+]
+
+
 
 
 
