@@ -243,8 +243,20 @@ export const ProjectOnboardingModal: React.FC<ProjectOnboardingModalProps> = ({
               disabled={submitting}
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black font-extrabold text-xs shadow-glow-cyan transition-all disabled:opacity-50"
             >
-              <Plus className="w-4 h-4 text-black" />
-              <span>{submitting ? 'Registering...' : 'Register Project into Mesh'}</span>
+              {submitting ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin text-black" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                  </svg>
+                  <span>Registering...</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 text-black" />
+                  <span>Register Project into Mesh</span>
+                </>
+              )}
             </button>
           </div>
         </form>

@@ -32,6 +32,7 @@ import { EdgeCaseSimulatorModal } from './components/EdgeCaseSimulatorModal';
 import { LoginModal } from './components/LoginModal';
 import { UserProfileMenu } from './components/UserProfileMenu';
 import { AdminAccessControlModal } from './components/AdminAccessControlModal';
+import { QuickAccessPalette } from './components/QuickAccessPalette';
 
 import { 
   SystemsOfRecord, MetricsResponse, StuckWorkItem, 
@@ -48,6 +49,7 @@ export default function App() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [degradedModeActive, setDegradedModeActive] = useState(false);
+  const [systemTier, setSystemTier] = useState<'standard' | 'advanced'>('standard');
 
   // Data states
   const [systems, setSystems] = useState<SystemsOfRecord | null>(null);
@@ -436,7 +438,7 @@ export default function App() {
       })
     : conflicts;
 
-  const appStages = [
+  const advancedStages = [
     {
       id: 'stage1',
       num: 1,
@@ -500,6 +502,53 @@ export default function App() {
       ]
     }
   ];
+
+  const standardStages = [
+    {
+      id: 'std1',
+      num: 1,
+      title: '1. Identify',
+      plane: 'INTAKE',
+      description: 'Scan Jira/Git for stuck work',
+      submodules: [
+        { id: 'stuck', label: 'Stuck Work', icon: AlertOctagon, count: filteredStuckWork.length }
+      ]
+    },
+    {
+      id: 'std2',
+      num: 2,
+      title: '2. Delegate',
+      plane: 'EXECUTION',
+      description: 'AI Agents draft the code fix',
+      submodules: [
+        { id: 'agents', label: 'AI Specialists', icon: Bot, count: 8 },
+        { id: 'tools', label: 'Console', icon: Sliders, count: filteredActions.filter(a => a.status === 'PENDING_APPROVAL').length }
+      ]
+    },
+    {
+      id: 'std3',
+      num: 3,
+      title: '3. Verify',
+      plane: 'GATE',
+      description: 'Golden tests ensure zero drift',
+      submodules: [
+        { id: 'arch', label: 'Quality Gate', icon: ShieldCheck, count: filteredConformance.length }
+      ]
+    },
+    {
+      id: 'std4',
+      num: 4,
+      title: '4. Deliver',
+      plane: 'APPROVAL',
+      description: 'Review and merge safely',
+      submodules: [
+        { id: 'radar', label: 'Outcome Radar', icon: Radar, count: null },
+        { id: 'observability', label: 'Telemetry', icon: Activity, count: 'Live' }
+      ]
+    }
+  ];
+
+  const appStages = systemTier === 'standard' ? standardStages : advancedStages;
 
   const handleNavigateToModule = (moduleId: string) => {
     playBeep(620, 0.08);
@@ -620,7 +669,8 @@ export default function App() {
             <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0e1424] border border-cyan-500/20 text-slate-300">
               <Wifi className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
               <span>Engine :6090</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" aria-label="Online"></span>
+              <span className="sr-only">Online</span>
             </div>
 
             <button
@@ -690,6 +740,43 @@ export default function App() {
         {/* APPLICATION PIPELINE FLOW CONTROLLER (Visible when Running Application is selected) */}
         {primarySelection === 'application' && (
           <div className="space-y-4">
+            
+            {/* TIER TOGGLE: Standard vs Advanced */}
+            <div className="flex items-center justify-center mb-2">
+              <div className="flex bg-[#050811] p-1 rounded-xl border border-white/10 shadow-inner">
+                <button
+                  onClick={() => {
+                    playBeep(480, 0.08);
+                    setSystemTier('standard');
+                    setCurrentStageIndex(0);
+                    setActiveModule(standardStages[0].submodules[0].id);
+                  }}
+                  className={`px-6 py-2 rounded-lg font-bold text-xs transition-all flex items-center gap-2 ${
+                    systemTier === 'standard' 
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'text-slate-500 hover:text-slate-300 border border-transparent'
+                  }`}
+                >
+                  <CheckCircle2 className="w-4 h-4" /> Standard Adoption (Business Core)
+                </button>
+                <button
+                  onClick={() => {
+                    playBeep(640, 0.08);
+                    setSystemTier('advanced');
+                    setCurrentStageIndex(0);
+                    setActiveModule(advancedStages[0].submodules[0].id);
+                  }}
+                  className={`px-6 py-2 rounded-lg font-bold text-xs transition-all flex items-center gap-2 ${
+                    systemTier === 'advanced' 
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      : 'text-slate-500 hover:text-slate-300 border border-transparent'
+                  }`}
+                >
+                  <Layers className="w-4 h-4" /> Advanced Tier (Enterprise Mesh)
+                </button>
+              </div>
+            </div>
+
             {/* PROJECT SCOPE & EXECUTION CONTROL BAR (Step 2 Project-to-Project Basis) */}
             <div className="p-4 rounded-2xl bg-[#080d1a] border border-cyan-500/30 shadow-2xl space-y-3">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -763,6 +850,8 @@ export default function App() {
                         playBeep(520, 0.05);
                         setFilterByProject(!filterByProject);
                       }}
+                      aria-pressed={filterByProject}
+                      aria-label="Toggle Project Filter"
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-mono text-xs font-bold transition-all border ${
                         filterByProject
                           ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-glow-cyan'
@@ -771,7 +860,7 @@ export default function App() {
                       title="Toggle between Active Project Filter and Mesh-wide All Projects View"
                     >
                       <Filter className="w-3.5 h-3.5" />
-                      <span>{filterByProject ? `Filter: ${currentProject.name.split(' ')[0]}` : 'All Projects'}</span>
+                      <span>{filterByProject ? `Filter ON: ${currentProject.name.split(' ')[0]}` : 'Filter OFF: All'}</span>
                     </button>
 
                     <button
@@ -837,6 +926,12 @@ export default function App() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setAdminModalOpen(true)}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition-colors shadow-sm"
+                    >
+                      Request Access
+                    </button>
                     <button
                       onClick={() => setLoginModalOpen(true)}
                       className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] transition-colors shadow-sm"
@@ -1167,6 +1262,26 @@ export default function App() {
         onUserUpdated={refreshCurrentSession}
       />
 
+
+      {/* Quick Access Palette (T-001) */}
+      <QuickAccessPalette 
+        onNavigateToModule={handleNavigateToModule}
+        onOpenGoldenTests={() => {
+          if (requirePermission('golden_tests.run', 'Run Golden Set Test Suite')) {
+            setGoldenModalOpen(true);
+          }
+        }}
+        onOpenChaosSimulator={() => {
+          if (requirePermission('chaos.simulate', 'Simulate Chaos & Fault Injection')) {
+            setSimulatorModalOpen(true);
+          }
+        }}
+        onOpenProjectOnboarding={() => {
+          if (requirePermission('project.onboard', 'Onboard Enterprise Microservice')) {
+            setOnboardingModalOpen(true);
+          }
+        }}
+      />
 
       {/* Cyber Footer */}
       <footer className="border-t border-white/5 py-4 px-4 bg-[#05070a] text-xs font-mono text-slate-500">
